@@ -99,6 +99,8 @@ Goal: a repo that builds on both machines with the tooling installed.
       the SDK's `setup-env.sh` which sets `VK_ICD_FILENAMES`/`VK_DRIVER_FILES`,
       `VK_LAYER_PATH`, `DYLD_LIBRARY_PATH`). Verify with `vulkaninfo --summary`
       and `nvcc --version`.
+      *Note: `docs/SETUP.md` written; not yet verified on either machine (Vulkan
+      SDK not yet installed on the Mac). Tick once both checks pass.*
 - [ ] **0.3 Assets folder.** `assets/` with a `README` describing where the
       sample models and splat files come from (Khronos glTF sample models;
       public 3DGS scenes), and a `.gitignore` so large files are not committed.
@@ -503,3 +505,5 @@ Add an entry per session: date, steps touched, anything learned that changes
 the plan.
 
 - 2026-10-16: Plan written. Step 0.1 done: workspace skeleton (Mac).
+- 2026-10-16: Step 0.2: `docs/SETUP.md` written, awaiting verification on
+  the Mac (needs the Vulkan SDK) and the PC.
