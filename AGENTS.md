@@ -87,11 +87,18 @@ and ask when different answers would lead to materially different code.
 - **Apple Silicon Mac via MoltenVK**: where milestones 0 to 4 and the
   Vulkan parts of 6 are developed. Everything except the CUDA feature must
   keep working here.
-- **Windows PC with NVIDIA GPU**: needed from milestone 5 onwards and for
-  performance numbers. All milestones must work here. Do not break the Mac build to make the PC path easier; use
-  feature gates. MoltenVK-specific requirements (portability enumeration,
-  portability subset, missing features) are documented in `docs/MACOS.md`.
-- Linux: should work, not routinely tested.
+- **Windows laptop with an NVIDIA RTX PRO 2000 Blackwell GPU** (`sm_120`,
+  8 GB VRAM, alongside integrated graphics): needed from milestone 5
+  onwards, for VR, and for performance numbers. All milestones must work
+  here. Keep VRAM use in mind; 8 GB is tight for training.
+- Linux: should work, not routinely tested. Rented cloud GPUs (Colab and
+  similar) are headless Linux, used when a job needs more than the laptop.
+  Code that may run there (the CUDA crate, the trainer) must not require a
+  window.
+
+Do not break the Mac build to make the PC path easier; use feature gates.
+MoltenVK-specific requirements (portability enumeration, portability subset,
+missing features) are documented in `docs/MACOS.md`.
 
 When writing platform-specific code, use `#[cfg(target_os = ...)]` at the
 smallest scope possible and keep the platform-neutral path readable.

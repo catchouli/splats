@@ -1,0 +1,26 @@
+[workspace]
+resolver = "3"
+members = ["crates/engine", "crates/viewer"]
+
+# Shared metadata so each crate's Cargo.toml can say `edition.workspace = true`.
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT OR Apache-2.0"
+
+# Dependencies are declared once here and pulled into crates with
+# `foo.workspace = true`, so versions stay in one place.
+[workspace.dependencies]
+engine = { path = "crates/engine" }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "warn"
+
+# Debug builds of the viewer are painfully slow once there is real work per
+# frame; optimise dependencies a little while keeping our own code debuggable.
+[profile.dev.package."*"]
+opt-level = 2

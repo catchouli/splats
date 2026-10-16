@@ -1,0 +1,23 @@
+# Build output
+/target/
+
+# Compiled shaders (build.rs writes these to OUT_DIR, but just in case)
+*.spv
+*.ptx
+
+# Editor and OS clutter
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Large downloaded assets: only the README and fetch scripts are tracked
+/assets/*
+!/assets/README.md
+
+# Captures and profiles
+*.rdc
+*.tracy
+*.nsys-rep
+*.ncu-rep

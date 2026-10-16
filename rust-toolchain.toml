@@ -1,0 +1,6 @@
+# Pin the exact toolchain so the Mac and the PC build with the same compiler.
+# rustup installs it automatically the first time cargo runs in this repo.
+# Bump deliberately, in its own commit.
+[toolchain]
+channel = "1.98.0"
+components = ["rustfmt", "clippy"]

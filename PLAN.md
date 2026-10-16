@@ -22,15 +22,23 @@ note is left under a step if the implementation diverged from the plan.
    neural networks and transformers from scratch.
 4. Keep the engine-side code portable enough that individual features
    (culling, splat rasterisation, the splat formats) could later be ported to
-   a C++ engine.
+   a C++ engine. For splats, aim for a narrow interface that a host engine
+   can call: splat buffers, a camera and the host's depth buffer go in, and
+   colour and depth come out.
 
 ## Platforms
 
 Milestones 0 to 4, and the Vulkan-only parts of milestone 6, are developed
 on an Apple Silicon Mac through MoltenVK. Milestone 5 onwards needs a Windows
-PC with an NVIDIA GPU for CUDA. Both machines must keep building and running
+laptop with an NVIDIA RTX PRO 2000 Blackwell laptop GPU (compute capability
+12.0, `sm_120`, 8 GB VRAM) for CUDA. Both machines must keep building and running
 everything except the CUDA-dependent features at all times. Linux should work
 but is not tested routinely.
+
+When a job outgrows the laptop GPU (mainly training in milestone 7 and the AI
+work in milestone 12), rented cloud GPUs such as Google Colab are fine.
+Those are headless Linux machines, so the CUDA crate and the trainer must
+build on Linux and run without a window or a Vulkan display.
 
 ## Key technical decisions
 
@@ -77,11 +85,13 @@ Rust edition 2024, stable toolchain. No nightly features.
 
 Goal: a repo that builds on both machines with the tooling installed.
 
-- [ ] **0.1 Repo and workspace.** `git init`, `.gitignore` (target/, SPIR-V
+- [x] **0.1 Repo and workspace.** `git init`, `.gitignore` (target/, SPIR-V
       outputs, `.vscode/` local settings, any downloaded assets), `Cargo.toml`
       workspace with `crates/engine` and `crates/viewer`, `rust-toolchain.toml`
       pinning stable, `rustfmt.toml`, `clippy` clean at default settings.
       A `README.md` that is one paragraph plus a link to this file.
+      *Note: toolchain pinned to an exact version (1.98.0) rather than the
+      `stable` channel, so both machines use the same compiler.*
 - [ ] **0.2 Tooling checklist (per machine).** Document in `docs/SETUP.md`:
       Rust via rustup; the LunarG Vulkan SDK (gives `glslc`, `vulkaninfo`,
       validation layers, and on macOS MoltenVK); on the PC, the CUDA Toolkit
@@ -273,8 +283,9 @@ the `cudarc` examples.
 - [ ] **5.1 Toolchain.** `crates/cuda` with a `build.rs` that runs `nvcc
       -ptx` on everything in `kernels/` (via the `cc` crate or a direct
       command), embeds the PTX, and loads it at runtime with `cudarc`. A
-      "hello" kernel (vector add) with a test. Decide the target `sm_` /
-      `compute_` version based on the PC's GPU and record it.
+      "hello" kernel (vector add) with a test. The target GPU is Blackwell
+      (`sm_120`), which needs CUDA 12.8 or newer; build PTX for
+      `compute_120` so the driver JIT compiles it.
 - [ ] **5.2 Kernel skill-up exercises.** Not engine features; small kernels
       in `kernels/exercises/` with timings, to refresh the fundamentals and
       learn what is new since ~2014: grid-stride loops, shared memory tiling,
@@ -287,7 +298,10 @@ the `cudarc` examples.
       `VK_KHR_external_memory` (win32 handle on Windows, fd on Linux), import
       it into CUDA with `cudaImportExternalMemory`, write to it from a kernel,
       read it in a Vulkan shader. Same for a `VkImage` if needed (mipmapped
-      arrays). Synchronise with external semaphores so there are no CPU
+      arrays). The laptop has integrated graphics plus the NVIDIA GPU, so
+      Vulkan must pick the NVIDIA device: match `VkPhysicalDeviceIDProperties`
+      `deviceUUID` against the CUDA device's UUID rather than trusting the
+      "discrete" heuristic. Synchronise with external semaphores so there are no CPU
       round-trips.
 - [ ] **5.4 Render something with CUDA.** A `CudaRenderNode` scenegraph node
       that owns a shared image, runs a kernel each frame, and is composited
@@ -309,7 +323,8 @@ Reference: Kerbl et al. 2023 "3D Gaussian Splatting for Real-Time Radiance
 Field Rendering" and the official `diff-gaussian-rasterization` CUDA code;
 Zwicker et al. 2001 "EWA Splatting" for the projected-covariance maths;
 the mkkellogg GaussianSplats3D and antimatter15 splat viewers for the
-simpler sort-and-blend approach.
+simpler sort-and-blend approach; Brush (Rust, wgpu) and `gsplat`'s kernels
+as modern reference implementations.
 
 - [ ] **6.1 Splat data model.** In-memory representation: position, scale
       (log), rotation (quaternion), opacity (logit), spherical-harmonics
@@ -366,6 +381,13 @@ Reference: the paper and `gaussian-splatting` repo for the algorithm; the
 `gsplat` library (Nerfstudio) for a cleaner, well-documented reimplementation
 of the backward pass.
 
+Hardware note: the laptop GPU has 8 GB of VRAM. The paper's full-resolution
+scenes want far more than that to train, so start with downscaled images
+(the standard `images_4` sets) and cap the splat count. Rendering is fine.
+For full-size runs, use a rented cloud GPU: the trainer gets a headless
+command-line mode that writes checkpoints and a `.ply`, with the live view
+as an optional extra.
+
 - [ ] **7.1 Inputs.** Read COLMAP output (`cameras.bin`, `images.bin`,
       `points3D.bin`) for camera intrinsics/extrinsics and the sparse point
       cloud used to initialise splats. Load the training images.
@@ -388,6 +410,70 @@ Beyond this, the natural next steps towards the AI goal are a small tensor
 library on top of the same CUDA kernels, then an MLP, then attention, but
 those are a different project.
 
+## Later milestones
+
+These come after milestone 6 at the earliest. They are sketched here so the
+earlier design does not rule them out; each gets broken into steps when it
+is reached.
+
+### Milestone 8: Splats with meshes
+
+The core product problem: show modelled meshes inside a captured splat scene
+and have them look like they belong. Splats have no hard surface, and their
+lighting is baked while the meshes are lit dynamically.
+
+- **8.1 Splat depth output.** Expected or median depth per pixel from the
+  blend, written to a depth target alongside colour.
+- **8.2 Two-way occlusion.** Meshes occlude splats through the scene depth
+  buffer (already there from 6.3). Splats occlude meshes through 8.1's depth,
+  with soft edges where splat opacity is partial.
+- **8.3 Lighting match.** Experiments: light the meshes with an environment
+  map captured from the splat scene, add contact shadows from meshes onto
+  splats, tone-map both together.
+- **8.4 Engineering tools.** Align a splat scene to the world at true scale,
+  clipping planes and sections, distance measurement, select and delete
+  regions of splats.
+
+### Milestone 9: More formats
+
+- **9.1 glTF splats.** The Khronos `KHR_gaussian_splatting` extension. Check
+  its ratification status first. Read and write, integrated with the
+  milestone 4 loader so one file can hold both meshes and splats.
+- **9.2 SOG** (PlayCanvas's texture-based compressed format), and the latest
+  SPZ version if 6.2 targeted an older one.
+- **9.3 Export and conversion** between all supported formats from the viewer.
+
+### Milestone 10: VR
+
+Windows only, through OpenXR (`openxr` crate). There is no OpenXR runtime on
+macOS.
+
+- **10.1 OpenXR session** with the Vulkan backend, stereo swapchains, head
+  tracking. Meshes first.
+- **10.2 Stereo splats.** Sort once from the centre eye and reuse it for both
+  eyes. Hold 72 to 90 Hz at headset resolution with a strict splat budget.
+- **10.3 Foveation** and other budget tricks. References: VRSplat,
+  VR-Splatting.
+
+### Milestone 11: Scale
+
+- **11.1 Hierarchical LOD** (Kerbl et al. 2024, hierarchical 3DGS): build a
+  splat hierarchy offline, pick a cut per frame by projected size.
+- **11.2 Chunking and streaming** of a scene too large for VRAM, out-of-core
+  loading from disk on a background thread.
+
+### Milestone 12: AI layer (pick one)
+
+- **Semantic splats.** Attach feature embeddings to splats so a scene can be
+  queried in plain language ("highlight the valves").
+- **Feed-forward reconstruction.** A network that predicts splats from a few
+  images in one pass, with no per-scene training.
+- **Splats as simulation.** Splat scenes as photoreal environments, for
+  example for robot training.
+
+These lead straight into implementing networks from scratch, which is the
+longer-term goal.
+
 ---
 
 ## Order of work and where the risk is
@@ -396,7 +482,8 @@ Milestones 0 to 4 are sequential and are done on the Mac. Milestone 5 (CUDA)
 needs the PC and can start any time after 1.10; it only strictly needs 5.3
 done before 6.6. Milestones 6.1 to 6.5 need only milestones 1 to 3 and also
 work on the Mac, so a sensible order is 0-4, 6.1-6.5, then move to the PC for
-5 and 6.6.
+5 and 6.6. Milestone 8 needs milestones 3 and 6.3. Milestones 10 to 12 need
+the Windows laptop.
 
 Known risk areas, worth a spike before committing to a design:
 
@@ -415,4 +502,4 @@ Known risk areas, worth a spike before committing to a design:
 Add an entry per session: date, steps touched, anything learned that changes
 the plan.
 
-- 2026-10-16: Plan written. No code yet.
+- 2026-10-16: Plan written. Step 0.1 done: workspace skeleton (Mac).
