@@ -106,6 +106,8 @@ smallest scope possible and keep the platform-neutral path readable.
 ## Code conventions
 
 - Rust 2024 edition, stable toolchain, no nightly features.
+- Lines are 100 columns, comments included. `rustfmt` enforces this for code
+  but cannot wrap comments on stable, so wrap them by hand to 100, not 80.
 - `unsafe` is unavoidable with `ash`. Keep it contained in the `gfx` module,
   wrap it in small safe-ish types, and put a `// SAFETY:` comment on each
   unsafe block stating what invariant makes it sound.

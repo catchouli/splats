@@ -13,6 +13,14 @@ license = "MIT OR Apache-2.0"
 # `foo.workspace = true`, so versions stay in one place.
 [workspace.dependencies]
 engine = { path = "crates/engine" }
+anyhow = "1"
+log = "0.4"
+tracing = "0.1"
+# Default features include `tracing-log`, which bridges the `log` facade into
+# tracing when the subscriber is installed with `init()`.
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# 0.31 is in beta; stay on 0.30 (raw-window-handle 0.6, as ash-window needs).
+winit = "0.30"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "warn"

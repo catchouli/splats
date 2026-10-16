@@ -122,9 +122,13 @@ this is also where MoltenVK is set up.
 Reference: vulkan-tutorial.com (updated for dynamic rendering), the
 `ash` examples, and the Vulkan Guide (vkguide.dev) for the "modern" way.
 
-- [ ] **1.1 Window and event loop.** `winit` window, resize and close events,
+- [x] **1.1 Window and event loop.** `winit` window, resize and close events,
       a frame loop that calls an empty `render()` with delta time. `log` macros
       for log lines, `tracing-subscriber` (plus `tracing-log`) as the sink.
+      *Note: winit 0.30 (`ApplicationHandler`); 0.31 is still beta.
+      `tracing-log` comes in through `tracing-subscriber`'s default features,
+      not as a direct dependency. The loop is unpaced (100% of one core) until
+      the FIFO swapchain in 1.4.*
 - [ ] **1.2 Instance, validation, and surface.** Create a `VkInstance` with
       the validation layer and the debug-utils messenger in debug builds.
       Create the surface with `ash-window`.
@@ -516,3 +520,5 @@ the plan.
 - 2026-10-16: Step 0.2 verified on the Mac (SDK 1.4.363, MoltenVK 1.4.2).
   Switched macOS setup to the SDK's global install, because SIP strips
   `DYLD_LIBRARY_PATH`. PC check deferred to Milestone 5. Step 0.3 done.
+- 2026-10-16: Step 1.1 done: winit window and frame loop in the viewer,
+  empty `engine::Renderer` with `resize`/`render(dt)`, tracing subscriber.
