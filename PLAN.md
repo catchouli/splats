@@ -129,7 +129,7 @@ Reference: vulkan-tutorial.com (updated for dynamic rendering), the
       `tracing-log` comes in through `tracing-subscriber`'s default features,
       not as a direct dependency. The loop is unpaced (100% of one core) until
       the FIFO swapchain in 1.4.*
-- [ ] **1.2 Instance, validation, and surface.** Create a `VkInstance` with
+- [x] **1.2 Instance, validation, and surface.** Create a `VkInstance` with
       the validation layer and the debug-utils messenger in debug builds.
       Create the surface with `ash-window`.
       *macOS specifics, which go in `docs/MACOS.md` as they are learned:*
@@ -138,6 +138,11 @@ Reference: vulkan-tutorial.com (updated for dynamic rendering), the
       device is not even enumerated; use `VK_EXT_metal_surface` (ash-window
       does this); expect `VK_KHR_get_physical_device_properties2` to be
       required as an instance extension.
+      *Note: code is in `crates/engine/src/gfx/` from the start, so 1.10 has
+      less to move. `get_physical_device_properties2` is not needed (core in
+      1.1). On macOS, `libvulkan.dylib` is not found by name from
+      `/usr/local/lib`; the engine falls back to full paths. Renderer takes
+      raw window handles through an `unsafe fn new`. See `docs/MACOS.md`.*
 - [ ] **1.3 Physical and logical device.** Pick a physical device (prefer
       discrete), find a queue family with graphics + present, create the
       device with the 1.3 features we rely on (dynamic rendering,
@@ -522,3 +527,7 @@ the plan.
   `DYLD_LIBRARY_PATH`. PC check deferred to Milestone 5. Step 0.3 done.
 - 2026-10-16: Step 1.1 done: winit window and frame loop in the viewer,
   empty `engine::Renderer` with `resize`/`render(dt)`, tracing subscriber.
+- 2026-10-16: Step 1.2 done: instance with validation and debug messenger,
+  portability enumeration, Metal surface. Found that dyld does not search
+  `/usr/local/lib` for the loader; fixed in code and `docs/SETUP.md`.
+  `docs/MACOS.md` started.

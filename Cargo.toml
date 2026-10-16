@@ -14,7 +14,12 @@ license = "MIT OR Apache-2.0"
 [workspace.dependencies]
 engine = { path = "crates/engine" }
 anyhow = "1"
+# `loaded` (default) opens the Vulkan loader library at runtime instead of linking it.
+ash = "0.38"
+ash-window = "0.13"
 log = "0.4"
+raw-window-handle = "0.6"
+thiserror = "2"
 tracing = "0.1"
 # Default features include `tracing-log`, which bridges the `log` facade into
 # tracing when the subscriber is installed with `init()`.

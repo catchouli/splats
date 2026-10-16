@@ -31,7 +31,7 @@ toolchain will not work with `nvcc`.
    **Tick "System Global Installation"** in the installer. It copies the
    loader (`libvulkan.dylib`), the MoltenVK ICD, the validation layers and
    the tools (`glslc`, `vulkaninfo`, ...) into `/usr/local`, which is where
-   the Vulkan loader and the dynamic linker look by default. No environment
+   the Vulkan loader looks for drivers and layers by default. No environment
    setup is then needed.
 
    Why not rely on the SDK's `setup-env.sh` instead: it makes the loader
@@ -40,8 +40,11 @@ toolchain will not work with `nvcc`.
    such as `/bin/zsh` launches a child process. `ash` loads `libvulkan.dylib`
    at runtime, so depending on how the viewer is started (Terminal, an IDE,
    a script) it would fail with "library not loaded" even though it compiled
-   fine. `/usr/local/lib` is on dyld's default search path, so the global
-   install works however the viewer is launched.
+   fine. With the global install the path is fixed: dyld does *not* search
+   `/usr/local/lib` for a bare library name (its default fallback is only
+   `/usr/lib`), so the engine opens `/usr/local/lib/libvulkan.dylib` by full
+   path when the plain lookup fails (see `docs/MACOS.md`). That works however
+   the viewer is launched.
 
    Do not also source `setup-env.sh` from your shell profile. It is harmless,
    but the loader then sees every layer twice (once from the SDK folder, once

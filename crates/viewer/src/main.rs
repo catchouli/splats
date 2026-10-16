@@ -17,6 +17,7 @@ use winit::dpi::LogicalSize;
 use winit::event::{ElementState, KeyEvent, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{Key, NamedKey};
+use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 use winit::window::{Window, WindowId};
 
 /// Longest frame time passed to `render`. After a stall (a breakpoint, the window being dragged on
@@ -25,8 +26,10 @@ use winit::window::{Window, WindowId};
 const MAX_DT: f32 = 0.25;
 
 struct App {
-    window: Option<Window>,
+    // Declared before `window` so it is dropped first if `App` is dropped without `exiting` having
+    // run: the renderer's Vulkan surface must not outlive the native window.
     renderer: Option<Renderer>,
+    window: Option<Window>,
     last_frame: Instant,
     /// Frames and time accumulated since the last frame-rate log line.
     stats_frames: u32,
@@ -40,8 +43,8 @@ impl App {
     fn new() -> Self {
         let now = Instant::now();
         Self {
-            window: None,
             renderer: None,
+            window: None,
             last_frame: now,
             stats_frames: 0,
             stats_start: now,
@@ -65,7 +68,13 @@ impl App {
             window.scale_factor()
         );
 
-        self.renderer = Some(Renderer::new(size.width, size.height));
+        let display = window.display_handle()?.as_raw();
+        let handle = window.window_handle()?.as_raw();
+        // SAFETY: the handles come from `window`, which `App` keeps alive for as long as the
+        // renderer: the renderer is dropped first in `exiting` and in `App`'s field order.
+        let renderer = unsafe { Renderer::new(display, handle, size.width, size.height)? };
+
+        self.renderer = Some(renderer);
         self.window = Some(window);
         self.last_frame = Instant::now();
         self.stats_start = self.last_frame;
@@ -150,8 +159,8 @@ impl ApplicationHandler for App {
         if let Some(renderer) = self.renderer.as_ref() {
             log::info!("exiting after {} frames", renderer.frame_index());
         }
-        // Drop the renderer before the window: from step 1.2 the renderer holds a Vulkan surface
-        // that must be destroyed while the native window still exists.
+        // Drop the renderer before the window: it holds a Vulkan surface that must be destroyed
+        // while the native window still exists.
         self.renderer = None;
         self.window = None;
     }
