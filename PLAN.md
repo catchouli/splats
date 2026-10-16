@@ -99,12 +99,18 @@ Goal: a repo that builds on both machines with the tooling installed.
       the SDK's `setup-env.sh` which sets `VK_ICD_FILENAMES`/`VK_DRIVER_FILES`,
       `VK_LAYER_PATH`, `DYLD_LIBRARY_PATH`). Verify with `vulkaninfo --summary`
       and `nvcc --version`.
-      *Note: `docs/SETUP.md` written; not yet verified on either machine (Vulkan
-      SDK not yet installed on the Mac). Tick once both checks pass.*
-- [ ] **0.3 Assets folder.** `assets/` with a `README` describing where the
+      *Note: `docs/SETUP.md` written. Mac verified (SDK 1.4.363, M3 Max,
+      MoltenVK 1.4.2). On macOS we use the SDK's global install into
+      `/usr/local` instead of `setup-env.sh`, because SIP strips
+      `DYLD_LIBRARY_PATH`. PC not yet verified. Tick once both checks pass.*
+- [x] **0.3 Assets folder.** `assets/` with a `README` describing where the
       sample models and splat files come from (Khronos glTF sample models;
       public 3DGS scenes), and a `.gitignore` so large files are not committed.
-      A tiny script (`scripts/fetch-assets.sh` / `.ps1`) that downloads them.
+      A tiny script (`scripts/fetch-assets.sh`) that downloads them.
+      *Note: no PowerShell version (not needed). glTF models come from a
+      sparse git checkout of glTF-Sample-Assets; splats from a per-scene
+      Hugging Face mirror, since the INRIA archive is 14.6 GB. Groups:
+      `gltf`, `gltf-all`, `splats`, `splats-large`, `all`.*
 
 ## Milestone 1: A triangle with Vulkan
 
@@ -507,3 +513,6 @@ the plan.
 - 2026-10-16: Plan written. Step 0.1 done: workspace skeleton (Mac).
 - 2026-10-16: Step 0.2: `docs/SETUP.md` written, awaiting verification on
   the Mac (needs the Vulkan SDK) and the PC.
+- 2026-10-16: Step 0.2 verified on the Mac (SDK 1.4.363, MoltenVK 1.4.2).
+  Switched macOS setup to the SDK's global install, because SIP strips
+  `DYLD_LIBRARY_PATH`. PC check deferred to Milestone 5. Step 0.3 done.

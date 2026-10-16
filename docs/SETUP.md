@@ -28,39 +28,42 @@ toolchain will not work with `nvcc`.
    `~/VulkanSDK/<version>/` and includes MoltenVK, the Vulkan loader, the
    validation layers, `glslc` and `vulkaninfo`.
 
-   The installer offers a "System Global Installation" option, which copies
-   the loader and MoltenVK into `/usr/local`. This project does not rely on
-   it: use the environment script below so that the SDK version in use is
-   explicit.
+   **Tick "System Global Installation"** in the installer. It copies the
+   loader (`libvulkan.dylib`), the MoltenVK ICD, the validation layers and
+   the tools (`glslc`, `vulkaninfo`, ...) into `/usr/local`, which is where
+   the Vulkan loader and the dynamic linker look by default. No environment
+   setup is then needed.
 
-2. **Environment.** Add this to your shell profile (`~/.zshrc`):
+   Why not rely on the SDK's `setup-env.sh` instead: it makes the loader
+   findable through `DYLD_LIBRARY_PATH`, and macOS (System Integrity
+   Protection) strips `DYLD_*` variables whenever a protected system binary
+   such as `/bin/zsh` launches a child process. `ash` loads `libvulkan.dylib`
+   at runtime, so depending on how the viewer is started (Terminal, an IDE,
+   a script) it would fail with "library not loaded" even though it compiled
+   fine. `/usr/local/lib` is on dyld's default search path, so the global
+   install works however the viewer is launched.
 
-   ```sh
-   source ~/VulkanSDK/<version>/setup-env.sh
-   ```
+   Do not also source `setup-env.sh` from your shell profile. It is harmless,
+   but the loader then sees every layer twice (once from the SDK folder, once
+   from `/usr/local`) and prints "Removing layer ... duplicate" warnings.
 
-   The script sets `VULKAN_SDK` (pointing at the `macOS` subfolder), adds the
-   SDK's `bin` to `PATH`, and sets the variables the Vulkan loader uses to
-   find things at runtime:
-   - `DYLD_LIBRARY_PATH`, so `libvulkan.dylib` can be found. `ash` loads the
-     loader dynamically at startup, so without this the viewer fails with
-     a "library not loaded" error even though it compiled fine.
-   - `VK_DRIVER_FILES` / `VK_ICD_FILENAMES` (newer and older name), pointing
-     at the MoltenVK ICD JSON. This is how the loader finds the "driver".
-   - `VK_LAYER_PATH` / `VK_ADD_LAYER_PATH`, so the validation layers are found.
+   To undo a global install, `sudo ~/VulkanSDK/<version>/uninstall.sh`
+   removes the `/usr/local` copies and the apps in `/Applications`, and leaves
+   `~/VulkanSDK` alone. When upgrading the SDK, run the new installer with
+   the same option ticked; it replaces the `/usr/local` files.
 
-   Anything started outside that shell (an IDE launched from the Dock, an
-   editor's built-in terminal that does not read `~/.zshrc`) will not have
-   these variables. If `cargo run` works in Terminal but not elsewhere, this
-   is why.
-
-3. **Check:**
+2. **Check** (in a new terminal):
 
    ```sh
-   echo $VULKAN_SDK          # .../VulkanSDK/<version>/macOS
+   which glslc               # /usr/local/bin/glslc
    glslc --version
    vulkaninfo --summary      # should list one device, "Apple M<n>", driver MoltenVK
    ```
+
+   Recent SDKs also install a second ICD, KosmicKrisp (Mesa's Vulkan on
+   Metal). On macOS 14 it does not show up as a device; if a newer macOS
+   lists two devices, the viewer must pick the MoltenVK one (record this in
+   `docs/MACOS.md` if it happens).
 
    `vulkaninfo` reports the device's Vulkan API version. MoltenVK supports
    1.3 with the portability subset; known gaps are tracked in
