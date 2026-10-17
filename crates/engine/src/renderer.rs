@@ -2,19 +2,22 @@
 //!
 //! The host app owns the window and the event loop and calls `resize` and `render`; the renderer
 //! never sees windowing events directly, so it can be driven by any host (our viewer, another
-//! engine). Step 1.2: it creates the Vulkan instance and the window surface.
+//! engine). So far it creates the Vulkan instance, the window surface and the device.
 
 use raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
-use crate::gfx::{self, Instance, Surface};
+use crate::gfx::{self, Device, Instance, Surface};
 
 pub struct Renderer {
     // Rust drops fields in declaration order (C++ destroys members in the reverse order), and
     // Vulkan objects must be destroyed before the instance they came from. So objects created
-    // from the instance are declared above it.
-    #[expect(dead_code, reason = "used from steps 1.3 (device) and 1.4 (swapchain)")]
+    // from the instance are declared above it. The device and the surface do not depend on each
+    // other, but the swapchain (1.4) depends on both and goes above them.
+    #[expect(dead_code, reason = "used from step 1.4 (swapchain)")]
+    device: Device,
+    #[expect(dead_code, reason = "used from step 1.4 (swapchain)")]
     surface: Surface,
-    #[expect(dead_code, reason = "used from step 1.3 (device selection)")]
+    #[expect(dead_code, reason = "kept alive for the objects above")]
     instance: Instance,
 
     /// Size of the drawable area in physical pixels. Can be 0x0 when the window is minimised.
@@ -44,12 +47,13 @@ impl Renderer {
         height: u32,
     ) -> gfx::Result<Self> {
         let instance = Instance::new(display)?;
-        instance.log_physical_devices()?;
         // SAFETY: the window outlives the renderer (this function's contract), and `surface` is
         // declared before `instance` in `Renderer`, so it is dropped first.
         let surface = unsafe { Surface::new(&instance, display, window)? };
+        let device = Device::new(&instance, &surface)?;
         log::info!("renderer created at {width}x{height}");
         Ok(Self {
+            device,
             surface,
             instance,
             width,

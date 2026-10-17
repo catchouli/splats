@@ -170,31 +170,6 @@ impl Instance {
     pub(super) fn raw(&self) -> &ash::Instance {
         &self.instance
     }
-
-    /// Logs every physical device the instance can see. A stand-in until device selection in
-    /// step 1.3; on a Mac, it shows that portability enumeration is working.
-    pub fn log_physical_devices(&self) -> Result<()> {
-        // SAFETY: the instance is valid.
-        let devices = unsafe { self.instance.enumerate_physical_devices() }
-            .map_err(vk_err("vkEnumeratePhysicalDevices"))?;
-        if devices.is_empty() {
-            log::warn!("no Vulkan physical devices found");
-        }
-        for device in devices {
-            // SAFETY: `device` was just enumerated from this instance.
-            let props = unsafe { self.instance.get_physical_device_properties(device) };
-            log::info!(
-                "physical device: {} ({:?}, Vulkan {})",
-                props
-                    .device_name_as_c_str()
-                    .map(CStr::to_string_lossy)
-                    .unwrap_or_default(),
-                props.device_type,
-                version_string(props.api_version)
-            );
-        }
-        Ok(())
-    }
 }
 
 impl Drop for Instance {

@@ -143,7 +143,7 @@ Reference: vulkan-tutorial.com (updated for dynamic rendering), the
       1.1). On macOS, `libvulkan.dylib` is not found by name from
       `/usr/local/lib`; the engine falls back to full paths. Renderer takes
       raw window handles through an `unsafe fn new`. See `docs/MACOS.md`.*
-- [ ] **1.3 Physical and logical device.** Pick a physical device (prefer
+- [x] **1.3 Physical and logical device.** Pick a physical device (prefer
       discrete), find a queue family with graphics + present, create the
       device with the 1.3 features we rely on (dynamic rendering,
       synchronization2, buffer device address, descriptor indexing).
@@ -152,6 +152,10 @@ Reference: vulkan-tutorial.com (updated for dynamic rendering), the
       MoltenVK feature list for anything we rely on that is missing. Check
       the actual Vulkan version MoltenVK reports; if 1.3 is not available, use
       the equivalent `KHR` extensions on 1.2.
+      *Note: MoltenVK reports 1.3, so no 1.2 fallback. One queue family for
+      graphics + present (no separate present queue). `VK_KHR_swapchain` is
+      required and enabled here. All supported portability-subset features are
+      enabled. Required features live in one table in `gfx/device.rs`.*
 - [ ] **1.4 Swapchain.** Surface format and present mode selection, image
       views, recreation on resize. Prefer `MAILBOX`, fall back to `FIFO`
       (MoltenVK typically only offers FIFO).
@@ -220,6 +224,8 @@ lives in separate flat arrays so culling and sorting touch only what they need.
 - [ ] **2.7 (Optional) GPU culling.** Compute shader that does the frustum
       test and writes the indirect buffer, with a count buffer and
       `vkCmdDrawIndexedIndirectCount`. Keep the CPU path as the reference.
+      *Note (from 1.3): MoltenVK reports `drawIndirectCount = false`, so the
+      count variant needs a fallback on the Mac (see `docs/MACOS.md`).*
 
 ## Milestone 3: PBR material system
 
@@ -531,3 +537,7 @@ the plan.
   portability enumeration, Metal surface. Found that dyld does not search
   `/usr/local/lib` for the loader; fixed in code and `docs/SETUP.md`.
   `docs/MACOS.md` started.
+- 2026-10-17: Step 1.3 done: physical device selection (discrete first,
+  rejection reasons logged), logical device with dynamic rendering, sync2,
+  buffer device address and descriptor indexing. MoltenVK lacks
+  `drawIndirectCount` (affects 2.7).

@@ -40,8 +40,9 @@ in `Contents/Frameworks` and load from there. Not needed yet.
   whenever the loader offers it, on every platform; elsewhere it is harmless.
 - **`VK_KHR_get_physical_device_properties2` is not needed** as an instance
   extension: it is core since Vulkan 1.1 and we request API 1.3. (Older
-  guides list it because they target 1.0.) Revisit in step 1.3 if the
-  validation layer asks for it when `VK_KHR_portability_subset` is enabled.
+  guides list it because they target 1.0.) Confirmed in step 1.3: enabling
+  `VK_KHR_portability_subset` on the device raises no validation message
+  without it.
 - **Surface:** `VK_EXT_metal_surface`, which `ash-window` picks for an AppKit
   window. It attaches a `CAMetalLayer` to the window's `NSView`, so the
   surface must be created on the main thread (winit's callbacks run there).
@@ -56,6 +57,30 @@ in `Contents/Frameworks` and load from there. Not needed yet.
   (`VK_ADD_LAYER_PATH`, `VK_ICD_FILENAMES`) are set alongside the global
   install, the loader logs a "Removing layer ... duplicate" warning per
   layer. Harmless; unset the variables (see `docs/SETUP.md`).
+
+## Device creation (step 1.3)
+
+- **`VK_KHR_portability_subset` must be enabled** whenever the device lists
+  it. Its features are parts of core Vulkan that MoltenVK may not do. The
+  engine enables every one the device supports and logs the rest. On the
+  M3 Max the unsupported ones are `pointPolygons`, `samplerMipLodBias`,
+  `tessellationIsolines` and `tessellationPointMode`. None of these matter
+  to us; `samplerMipLodBias` means sampler LOD bias must stay 0.
+- **Everything the plan relies on is supported:** dynamic rendering,
+  synchronization2, buffer device address, and the descriptor-indexing
+  features for bindless textures (runtime arrays, partially bound,
+  variable count, non-uniform sampled-image indexing, update-after-bind).
+  `timelineSemaphore` and `scalarBlockLayout` are also available.
+- **Not supported:** `drawIndirectCount` (so no
+  `vkCmdDrawIndexedIndirectCount`; this matters for step 2.7),
+  `geometryShader`, `wideLines`.
+- **Queues:** 4 queue families, each with 1 queue, all
+  graphics + compute + transfer. Family 0 presents.
+- The device is an `INTEGRATED_GPU`, so the "prefer discrete" rule has no
+  effect here.
+- The validation layer logs `WARNING-cache-file-error` at INFO severity at
+  device creation the first time it runs (there is no
+  `~/.cache/shader_validation_cache.bin` yet). It is not a problem.
 
 ## Build warnings
 

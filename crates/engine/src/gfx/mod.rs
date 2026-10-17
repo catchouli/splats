@@ -1,9 +1,11 @@
 //! Vulkan backend. The `unsafe` Vulkan calls live under this module, wrapped in small types that
 //! each own one or a few Vulkan objects and destroy them on drop.
 
+mod device;
 mod instance;
 mod surface;
 
+pub use device::Device;
 pub use instance::Instance;
 pub use surface::Surface;
 
@@ -20,6 +22,8 @@ pub enum GfxError {
     },
     #[error("required Vulkan instance extension {0} is not available")]
     MissingExtension(String),
+    #[error("no suitable Vulkan device: {0}")]
+    NoSuitableDevice(String),
 }
 
 pub type Result<T> = std::result::Result<T, GfxError>;

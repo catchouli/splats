@@ -38,6 +38,24 @@ impl Surface {
     pub fn handle(&self) -> vk::SurfaceKHR {
         self.surface
     }
+
+    /// Whether queues of `queue_family_index` on `physical_device` can present to this surface.
+    pub(super) fn supports_present(
+        &self,
+        physical_device: vk::PhysicalDevice,
+        queue_family_index: u32,
+    ) -> Result<bool> {
+        // SAFETY: the physical device and the surface come from the same instance, and the index
+        // is below the device's queue family count (the caller iterates over its families).
+        unsafe {
+            self.loader.get_physical_device_surface_support(
+                physical_device,
+                queue_family_index,
+                self.surface,
+            )
+        }
+        .map_err(vk_err("vkGetPhysicalDeviceSurfaceSupportKHR"))
+    }
 }
 
 impl Drop for Surface {
